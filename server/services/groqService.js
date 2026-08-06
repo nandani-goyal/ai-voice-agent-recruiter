@@ -5,10 +5,11 @@ const { getGroqClient } = require("../config/groq");
  *
  * @param {string} query - User question
  * @param {Array<{content: string, source: string}>} chunks - Retrieved context chunks
+ * @param {string} [history] - Optional conversation history (last messages)
  * @param {Object} [options] - Model configuration overrides
  * @returns {Promise<string>} Grounded answer text
  */
-const generateRagAnswer = async (query, chunks, options = {}) => {
+const generateRagAnswer = async (query, chunks, history = "", options = {}) => {
   const groq = getGroqClient();
 
   if (!chunks || chunks.length === 0) {
@@ -20,7 +21,8 @@ const generateRagAnswer = async (query, chunks, options = {}) => {
     .map((chunk, index) => `[Document ${index + 1} - ${chunk.source}]:\n${chunk.content}`)
     .join("\n\n");
 
-  const systemPrompt = `You are a helpful and accurate HR and recruitment AI assistant.
+  const baseSystemPrompt = `You are an AI recruitment interviewer. Ask one interview question at a time, evaluate the candidate's responses using the provided recruitment knowledge base, answer candidate questions only using the retrieved context, and maintain a professional interview flow.
+
 Your task is to answer user questions strictly based on the provided Context below.
 
 CRITICAL INSTRUCTIONS:
@@ -29,11 +31,9 @@ CRITICAL INSTRUCTIONS:
 "I couldn't find that information in the knowledge base."
 3. Keep your answer clear, concise, well-structured, and factual.`;
 
-  const userPrompt = `Context:
-${contextText}
+  const systemPrompt = history ? `${baseSystemPrompt}\n\nConversation History:\n${history}` : baseSystemPrompt;
 
-Question:
-${query}`;
+  const userPrompt = `Context:\n${contextText}\n\nQuestion:\n${query}`;
 
   const model = options.model || "llama-3.3-70b-versatile";
 
@@ -52,7 +52,7 @@ ${query}`;
   } catch (err) {
     if (model !== "llama3-8b-8192") {
       console.warn(`[Groq] ${model} error, falling back to llama3-8b-8192:`, err.message);
-      return generateRagAnswer(query, chunks, { ...options, model: "llama3-8b-8192" });
+      return generateRagAnswer(query, chunks, history, { ...options, model: "llama3-8b-8192" });
     }
     throw err;
   }

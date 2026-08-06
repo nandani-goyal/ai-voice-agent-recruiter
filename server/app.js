@@ -11,22 +11,24 @@ const healthRouter = require("./routes/health");
 const uploadRoutes = require("./routes/uploadRoutes");
 const testRoutes = require("./routes/testRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const transcribeRoutes = require("./routes/transcribeRoutes");
 
 const app = express();
 const server = http.createServer(app);
 
-// -- Middleware -----------------------------------------------------------------
+// ── Middleware ─────────────────────────────────────────────────────────────────
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
 app.use(express.json());
 
-// -- Routes --------------------------------------------------------------------
+// ── Routes ────────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => res.send("Recruit AI Backend Running"));
 app.use("/health", healthRouter);
 app.use("/api", testRoutes);
 app.use("/api", uploadRoutes);
 app.use("/api", chatRoutes);
+app.use("/api", transcribeRoutes);
 
-// -- Bootstrap -----------------------------------------------------------------
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 
 const start = async () => {
