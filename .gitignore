@@ -43,3 +43,8 @@ coverage/
 
 # -- OS ------------------------------------------------------------------------
 Thumbs.db
+# Transformers models
+server/models/
+models/
+.cache/
+*.onnx
