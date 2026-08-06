@@ -12,6 +12,9 @@ const {
   storeChunks,
   COLLECTION_NAME,
 } = require("../services/qdrantService");
+const { saveChunkMetadata } = require("../services/mongoService");
+const { searchKnowledgeBase } = require("../services/retrievalService");
+const { handleChat } = require("../controllers/chatController");
 
 // -- GET /api/test-chunks -------------------------------------------------------
 router.get("/test-chunks", async (req, res) => {
@@ -63,29 +66,21 @@ router.get("/test-embeddings", async (req, res) => {
 });
 
 // -- GET /api/test-ingestion ----------------------------------------------------
-// Full ingestion pipeline: Read PDFs -> Extract -> Chunk -> Embed -> Store in Qdrant
 router.get("/test-ingestion", async (req, res) => {
   try {
-    // 1. Read PDFs & Extract text
     const docs = await extractAllPDFs();
-
-    // 2. Chunk text (~300 words)
     const chunks = chunkText(docs);
-
-    // 3. Generate embeddings
     const embeddedChunks = await generateEmbeddingsForChunks(chunks);
 
-    // 4. Initialize Qdrant collection if not exists
     await initializeCollection();
-
-    // 5. Batch insert vectors into Qdrant
     const vectorsStored = await storeChunks(embeddedChunks);
+    const metadataStored = await saveChunkMetadata(embeddedChunks);
 
-    // 6. Return response
     res.json({
       totalDocuments: docs.length,
       totalChunks: chunks.length,
       vectorsStored,
+      metadataStored,
       collection: COLLECTION_NAME,
     });
   } catch (err) {
@@ -93,5 +88,29 @@ router.get("/test-ingestion", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// -- POST /api/retrieve ---------------------------------------------------------
+router.post("/retrieve", async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    if (!query || typeof query !== "string" || !query.trim()) {
+      return res.status(400).json({ error: "Query string is required" });
+    }
+
+    const results = await searchKnowledgeBase(query.trim(), 5);
+
+    res.json({
+      query: query.trim(),
+      results,
+    });
+  } catch (err) {
+    console.error("[Retrieval] Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -- POST /api/chat -------------------------------------------------------------
+router.post("/chat", handleChat);
 
 module.exports = router;

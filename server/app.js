@@ -8,14 +8,12 @@ const { ensureCollection } = require("./config/qdrant");
 const { initSocket } = require("./socket/socket");
 
 const healthRouter = require("./routes/health");
+const uploadRoutes = require("./routes/uploadRoutes");
+const testRoutes = require("./routes/testRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 const app = express();
 const server = http.createServer(app);
-const uploadRoutes = require("./routes/uploadRoutes");
-const testRoutes = require("./routes/testRoutes");
-
-app.use("/api", testRoutes);
-app.use("/api", uploadRoutes);
 
 // -- Middleware -----------------------------------------------------------------
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173" }));
@@ -24,6 +22,9 @@ app.use(express.json());
 // -- Routes --------------------------------------------------------------------
 app.get("/", (req, res) => res.send("Recruit AI Backend Running"));
 app.use("/health", healthRouter);
+app.use("/api", testRoutes);
+app.use("/api", uploadRoutes);
+app.use("/api", chatRoutes);
 
 // -- Bootstrap -----------------------------------------------------------------
 const PORT = process.env.PORT || 5000;
