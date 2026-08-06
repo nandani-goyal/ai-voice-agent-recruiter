@@ -1,0 +1,45 @@
+# -- Dependencies --------------------------------------------------------------
+node_modules/
+**/node_modules/
+
+# -- Environment / Secrets (NEVER commit these) --------------------------------
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# -- Build output --------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+
+# -- Uploads / media (user-generated, can be large) ---------------------------
+uploads/
+recordings/
+server/uploads/
+server/recordings/
+
+# -- Logs ----------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -- Test / coverage -----------------------------------------------------------
+coverage/
+
+# -- Editor --------------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# -- OS ------------------------------------------------------------------------
+Thumbs.db
