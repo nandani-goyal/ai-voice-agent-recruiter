@@ -143,10 +143,10 @@ Recruiters can monitor live interviews from /dashboard using the active sessionI
 
 ## Screenshots
 
-![Interview Interface](https://via.placeholder.com/800x450?text=Candidate+Voice+Interview+Interface)
+![Interview Interface](https://github.com/user-attachments/assets/a4929396-81d4-4dfd-8098-25f3a53c8037)
 _Candidate Voice Interview Interface (`/`)_
 
-![Recruiter Dashboard](https://via.placeholder.com/800x450?text=Recruiter+Live+Dashboard)
+![Recruiter Dashboard](https://github.com/user-attachments/assets/42e2ccb7-1f25-4182-8a09-7f1bdaf100bc)
 _Recruiter Monitoring Dashboard (`/dashboard`)_
 
 ## Future Improvements
