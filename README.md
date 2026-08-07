@@ -104,39 +104,67 @@ The application will be accessible at `http://localhost:5173`.
 
 ```mermaid
 flowchart TD
-    subgraph Candidate ["Candidate Client (/)"]
-        MR[MediaRecorder 2s Chunks] -->|Merge into 1 WebM| UAD[Single Merged Audio]
-        UAD -->|POST /api/transcribe| STT_API[Transcribe Endpoint]
-        STT_API -->|Transcript text| CHAT_API[POST /api/chat]
-        TTS[Web SpeechSynthesis] <--|AI Text| InterviewUI[Interview Page]
-    end
 
-    subgraph Ingestion ["Ingestion Pipeline"]
-        PDF[PDF Documents] --> PDFP[pdf-parse]
-        PDFP --> CS[Chunk Service 300 words]
-        CS --> ES[Local MiniLM Transformers.js]
-        ES -->|384-dim Vectors| QDR[Qdrant Cloud candidate_kb]
-        CS -->|Metadata| MDB_KD[MongoDB KnowledgeDocument]
-    end
+subgraph Candidate
+direction TB
+MR["MediaRecorder (2s Chunks)"]
+UAD["Merged WebM Audio"]
+STT["/api/transcribe"]
+CHAT["/api/chat"]
+TTS["Speech Synthesis"]
 
-    subgraph Backend ["Server & RAG Engine"]
-        STT_API --> FF[ffmpeg WAV Conversion]
-        FF --> GW[Groq Whisper STT]
-        CHAT_API --> RET[Retrieval Service]
-        RET -->|Vector Search| QDR
-        QDR -->|Context Chunks| GROQ[Groq llama-3.3-70b]
-        GROQ -->|AI Response| EVAL[Evaluation Service]
-        EVAL -->|Persist Scores| MDB_AN[MongoDB InterviewAnalytics & RecruiterNudge]
-        EVAL -->|Emit interview:update| SIO[Socket.IO Server]
-    end
+MR --> UAD
+UAD --> STT
+STT --> CHAT
+CHAT --> TTS
+end
 
-    subgraph Recruiter ["Recruiter Dashboard (/dashboard)"]
-        SIO -->|Socket Room sessionId| DashUI[Live Dashboard UI]
-        DashUI --> AP[Analytics Panel]
-        DashUI --> SP[Skills Panel]
-        DashUI --> NP[Nudges Panel]
-        DashUI --> LT[Live Transcript & Timeline]
-    end
+subgraph Ingestion
+direction TB
+PDF["PDF Documents"]
+PARSE["Extract Text"]
+CHUNK["Chunk Documents"]
+EMBED["MiniLM Embeddings"]
+QDR["Qdrant Vector Store"]
+META["MongoDB Metadata"]
+
+PDF --> PARSE
+PARSE --> CHUNK
+CHUNK --> EMBED
+EMBED --> QDR
+CHUNK --> META
+end
+
+subgraph Backend
+direction TB
+RET["Retrieval Service"]
+LLM["Groq LLM"]
+EVAL["Evaluation Engine"]
+DB["MongoDB"]
+SOCKET["Socket.IO"]
+
+CHAT --> RET
+RET --> QDR
+QDR --> LLM
+LLM --> EVAL
+EVAL --> DB
+EVAL --> SOCKET
+end
+
+subgraph Recruiter
+direction TB
+DASH["Recruiter Dashboard"]
+TRANS["Live Transcript"]
+ANALYTICS["Interview Analytics"]
+SKILLS["Skills Analysis"]
+NUDGES["Recruiter Nudges"]
+
+SOCKET --> DASH
+DASH --> TRANS
+DASH --> ANALYTICS
+DASH --> SKILLS
+DASH --> NUDGES
+end
 ```
 
 Recruiters can monitor live interviews from /dashboard using the active sessionId, where transcripts, analytics, skills, recruiter nudges, and hiring recommendations are updated in real time.
