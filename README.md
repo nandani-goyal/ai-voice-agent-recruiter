@@ -4,12 +4,13 @@ An end-to-end AI-powered recruitment platform that conducts voice-based technica
 
 ## Features
 
-- **Voice-Based Interactive Interview**: Real-time microphone capture with browser SpeechSynthesis audio playback for an interactive conversational flow.
-- **Single-Upload Audio STT**: Buffers 2-second audio chunks locally in memory and merges them into a single WebM file upon answer completion, sending exactly ONE transcription request to Groq Whisper (`whisper-large-v3`) per turn.
-- **Knowledge-Grounded RAG**: Ingests job descriptions, guidelines, and candidate resumes, generates 384-dimensional vector embeddings locally using `@xenova/transformers`, and retrieves context via Qdrant vector search.
-- **Grounded LLM Question & Answer Generation**: Generates contextual interview questions and grounded candidate assistance using Groq (`llama-3.3-70b-versatile`).
-- **Automated Interview Evaluation Engine**: Evaluates technical depth, communication, and confidence scores after every answer, detecting covered vs. missing skills and generating live recruiter nudges.
-- **Live Recruiter Dashboard**: Multi-room Socket.IO synchronization streaming live candidate transcripts, session timeline, status indicators, score breakdowns, skill coverage, and follow-up probes.
+🎤 Voice-based interview with Groq Whisper
+🧠 RAG-powered question answering using Qdrant
+📄 PDF knowledge base ingestion with local embeddings
+📊 Real-time recruiter dashboard using Socket.IO
+📈 Automated interview evaluation and scoring
+🎯 Skill detection, recruiter nudges, and hiring recommendation
+💾 MongoDB for conversation history and analytics
 
 ## Tech Stack
 
@@ -62,43 +63,43 @@ npm run dev
 
 The application will be accessible at `http://localhost:5173`.
 
-## Application Routes
+## 📍 Application Routes
 
-### Frontend Pages
+### Frontend
 
-- `/`: Candidate Voice Interview interface.
-- `/dashboard`: Live Recruiter Dashboard for monitoring candidate sessions.
+- **`/`** – Candidate Voice Interview
+- **`/dashboard`** – Live Recruiter Dashboard
 
-### Backend API Endpoints
+### Backend APIs
 
-- `POST /api/transcribe`: Accepts audio file upload (`audio`), converts non-WAV formats to PCM WAV via `ffmpeg`, transcribes using Groq Whisper, and cleans up temp files.
-- `POST /api/chat`: Accepts `{ query, sessionId }`, retrieves top-K context chunks from Qdrant, generates LLM response via Groq, executes evaluation engine, persists metrics to MongoDB, and broadcasts updates over Socket.IO.
-- `POST /api/upload`: Uploads PDF documents to server `uploads/` folder.
-- `POST /api/retrieve`: Tests vector search in Qdrant for a given text query.
-- `GET /api/test-chunks`: Tests PDF parsing and 300-word text chunking.
-- `GET /api/test-embeddings`: Tests local MiniLM embedding generation.
-- `GET /api/test-ingestion`: Executes end-to-end ingestion pipeline (Extract → Chunk → Embed → Qdrant + MongoDB).
-- `GET /health`: System health check returning status of MongoDB, Qdrant, Groq, and Socket.IO.
+| Endpoint               | Description                                       |
+| ---------------------- | ------------------------------------------------- |
+| `POST /api/transcribe` | Transcribe candidate audio using Groq Whisper     |
+| `POST /api/chat`       | RAG-based interview, evaluation, and live updates |
+| `POST /api/upload`     | Upload PDF knowledge base documents               |
+| `POST /api/retrieve`   | Test semantic retrieval                           |
+| `GET /health`          | Health check                                      |
 
-## Knowledge Base Ingestion Flow
+---
 
-1. **Extraction**: `pdfService` extracts raw text from PDF files located in `server/uploads/` using `pdf-parse`.
-2. **Chunking**: `chunkService` cleans whitespace and splits document text into chunks of up to 300 words, appending source metadata and UUID chunk IDs.
-3. **Embedding Generation**: `embeddingService` uses `@xenova/transformers` running the `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` model locally to generate 384-dimensional dense vectors without external API calls.
-4. **Vector & Metadata Storage**:
-   - `qdrantService` upserts the 384-dim vectors along with payload (`source`, `content`, `wordCount`) into Qdrant (`candidate_kb` collection).
-   - `mongoService` performs bulk upserts to save document metadata (`chunkId`, `source`, `wordCount`, `ingestionStatus`) in MongoDB (`KnowledgeDocument` schema).
+## 📚 Knowledge Base Pipeline
 
-## Runtime Interview Flow
+1. Extract text from uploaded PDFs.
+2. Split documents into semantic chunks.
+3. Generate MiniLM embeddings locally.
+4. Store vectors in **Qdrant** and metadata in **MongoDB**.
+5. Retrieve relevant chunks during interviews to ground LLM responses.
 
-1. **Audio Recording**: In `Interview.jsx`, `useRecorder` captures candidate speech via `MediaRecorder` in 2-second interval chunks, buffering them in memory (`chunksRef`).
-2. **Audio Merging & Transcription**: When recording stops, all recorded chunks are merged into a single WebM Blob. Exactly **ONE merged audio file** per answer is uploaded to `POST /api/transcribe`.
-3. **Audio Conversion & Whisper STT**: The backend receives the file, uses `fluent-ffmpeg` to convert it to PCM 16-bit WAV format, sends it to Groq Whisper (`whisper-large-v3`), and returns the transcript.
-4. **Context Retrieval**: `chatController` generates a 384-dim query embedding using `@xenova/transformers` and queries Qdrant for top 5 matching context chunks.
-5. **Grounded Answer Generation**: Groq LLM (`llama-3.3-70b-versatile`) synthesizes an interview response conditioned strictly on retrieved context and recent conversation history.
-6. **Interview Evaluation Engine**: `evaluationService` extracts candidate response features, cross-references required job skills (`server/config/jobDescription.json`), computes numerical scores (Overall, Technical, Communication, Confidence), identifies detected/missing skills, and builds follow-up probes.
-7. **Database Persistence & Socket Broadcast**: Evaluation results are saved in MongoDB (`InterviewAnalytics` and `RecruiterNudge` models) and emitted over Socket.IO to room `sessionId` under event `interview:update` (`analytics`, `skills`, `nudges`).
-8. **UI Update**: Recruiter Dashboard updates live metrics in real-time while browser `SpeechSynthesis` reads the AI response to the candidate.
+---
+
+## 🎤 Interview Flow
+
+1. Record the candidate's answer.
+2. Merge audio and transcribe it using **Groq Whisper**.
+3. Retrieve relevant context from **Qdrant**.
+4. Generate the next interview response with **Groq LLM**.
+5. Evaluate the response (scores, skills, recruiter nudges).
+6. Store analytics in **MongoDB** and stream live updates to the recruiter dashboard via **Socket.IO**.
 
 ## Architecture Overview
 
