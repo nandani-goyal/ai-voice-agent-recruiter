@@ -5,7 +5,7 @@ const { saveMessage, getRecentMessages } = require('../services/conversationServ
 const { getIO } = require('../socket/socket');
 const InterviewAnalytics = require('../models/InterviewAnalytics');
 const RecruiterNudge = require('../models/RecruiterNudge');
-
+ const { evaluateAnswer } = require('../services/evaluationService');
 /**
  * Handle POST /api/chat
  * Complete RAG pipeline with conversation persistence and emit Socket.IO events.
@@ -26,12 +26,13 @@ const handleChat = async (req, res) => {
     // Save candidate message and emit to recruiter dashboard
     await saveMessage(sessionId, 'candidate', cleanQuery);
     const io = getIO();
-    io.to(sessionId).emit('interview:update', {
+    if(io){
+      io.to(sessionId).emit('interview:update', {
       sessionId,
       type: 'transcript',
       data: { speaker: 'candidate', text: cleanQuery, timestamp: Date.now() },
     });
-    io.to(sessionId).emit('interview:update', { sessionId, type: 'status', data: 'Thinking' });
+    io.to(sessionId).emit('interview:update', { sessionId, type: 'status', data: 'Thinking' });}
 
     // Retrieve relevant knowledge base chunks
     const chunks = await searchKnowledgeBase(cleanQuery, 5);
@@ -58,29 +59,34 @@ const handleChat = async (req, res) => {
     // Extract unique source filenames for reference
     const sources = [...new Set(chunks.map((c) => c.source).filter(Boolean))];
 
-    // ----- Analytics & Nudges (placeholder logic) -----
-    // In a real implementation these would be computed from the answer and knowledge base.
-    const analyticsUpdate = await InterviewAnalytics.findOneAndUpdate(
-      { sessionId },
-      {
-        $inc: { questionsCompleted: 1 },
-        overallScore: 0,
-        technicalScore: 0,
-        communicationScore: 0,
-        confidenceScore: 0,
-        hiringRecommendation: 'Hold',
-      },
-      { upsert: true, new: true }
-    );
-    const nudgesUpdate = await RecruiterNudge.findOneAndUpdate(
-      { sessionId },
-      {
-        $setOnInsert: { followUpQuestions: [], probeSkills: [], missingTopics: [], hiringRecommendation: 'Hold' },
-      },
-      { upsert: true, new: true }
-    );
-    io.to(sessionId).emit('interview:update', { sessionId, type: 'analytics', data: analyticsUpdate });
-    io.to(sessionId).emit('interview:update', { sessionId, type: 'nudges', data: nudgesUpdate });
+    // ----- Analytics & Nudges (real implementation) -----
+   
+    // Evaluate the candidate answer
+   const evaluation = await evaluateAnswer({
+  sessionId,
+  candidateQuery: cleanQuery,
+  answer,
+  ragChunks: chunks,
+  history: recent,
+});
+    // Emit analytics, skills, and nudges updates
+ io.to(sessionId).emit("interview:update", {
+  sessionId,
+  type: "analytics",
+  data: evaluation.analytics,
+});
+
+io.to(sessionId).emit("interview:update", {
+  sessionId,
+  type: "skills",
+  data: evaluation.skills,
+});
+
+io.to(sessionId).emit("interview:update", {
+  sessionId,
+  type: "nudges",
+  data: evaluation.nudges,
+});
 
     // Return response to the interview client
     res.json({ query: cleanQuery, answer, sources });

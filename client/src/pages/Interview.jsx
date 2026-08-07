@@ -132,6 +132,7 @@ export default function Interview() {
 
   const handleStartInterview = () => {
     const newSessionId = uuidv4();
+    console.log('🔑 Interview sessionId →', newSessionId);
     setSessionId(newSessionId);
     sessionIdRef.current = newSessionId;
     setIsInterviewStarted(true);
